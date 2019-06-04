@@ -3,150 +3,154 @@ namespace AfricasTalking\SDK;
 
 class SMS extends Service
 {
-	protected function doSend ($options, $isPremium)
-	{
-		if (empty($options['to']) || empty($options['message'])) {
-			return $this->error('recipient and message must be defined');
-		}
+    protected function doSend ($options, $isPremium)
+    {
+        if (empty($options['to']) || empty($options['message'])) {
+            return $this->error('recipient and message must be defined');
+        }
 
-		if (!is_array($options['to'])) {
-			$options['to'] = [$options['to']];
-		}
+        if (!is_array($options['to'])) {
+            $options['to'] = [$options['to']];
+        }
 
-		$data = [
-			'username' 	=> $this->username,
-			'to' 		=> implode(",", $options['to']),
-			'message' 	=> $options['message']
-		];
+        $data = [
+            'username'  => $this->username,
+            'to'        => implode(",", $options['to']),
+            'message'   => $options['message']
+        ];
 
-		if (array_key_exists('enqueue', $options) && $options['enqueue']) {
-			$data['enqueue'] = 1;
-		}
+        if (array_key_exists('enqueue', $options) && $options['enqueue']) {
+            $data['enqueue'] = 1;
+        }
 
-		if ($isPremium === true) {
-			if (empty($options['from'])) {
-				return [
-					'status' => 'error', 
-					'data' => 'from is required for premium SMS'
-				];
-			}
+        if ($isPremium === true) {
+            if (empty($options['from'])) {
+                return [
+                    'status' => 'error', 
+                    'data' => 'from is required for premium SMS'
+                ];
+            }
 
-			if (!empty($options['keyword'])) {
-				$data['keyword'] = $options['keyword'];
-			}
+            if (!empty($options['keyword'])) {
+                $data['keyword'] = $options['keyword'];
+            }
 
             if (!empty($options['linkId'])) {
                 $data['linkId'] = $options['linkId'];
             }
 
-			if (!empty($options['retryDurationInHours'])) {
-				$data['retryDurationInHours'] = $options['retryDurationInHours'];
-			}
+            if (!empty($options['retryDurationInHours'])) {
+                $data['retryDurationInHours'] = $options['retryDurationInHours'];
+            }
 
-			// turn off bulk sms mode
-			$data['bulkSMSMode'] = 0;
-		}
+            // turn off bulk sms mode
+            $data['bulkSMSMode'] = 0;
+        }
 
-		if (!empty($options['from'])) {
-			$data['from'] = $options['from'];
-		}
+        if (!empty($options['from'])) {
+            $data['from'] = $options['from'];
+        }
 
-		$response = $this->client->post('messaging', ['form_params' => $data ]);
+        if ($options['async']) {
+            return $this->client->postAsync('messaging', ['form_params' => $data ]);
+        }
 
-		return $this->success($response);
-	}
+        $response = $this->client->post('messaging', ['form_params' => $data ]);
 
-	public function send($options)
-	{
-		return $this->doSend($options, false);
-	}
+        return $this->success($response);
+    }
 
-	public function sendPremium($options)
-	{
-		return $this->doSend($options, true);
-	}
+    public function send($options)
+    {
+        return $this->doSend($options, false);
+    }
 
-	public function fetchMessages($options = [])
-	{
-		if (empty($options['lastReceivedId'])) {
-			$options['lastReceivedId'] = 0;
-		}
+    public function sendPremium($options)
+    {
+        return $this->doSend($options, true);
+    }
 
-		if (!is_numeric($options['lastReceivedId'])) {
-			return $this->error('lastReceivedId must be an integer');
-		}	
+    public function fetchMessages($options = [])
+    {
+        if (empty($options['lastReceivedId'])) {
+            $options['lastReceivedId'] = 0;
+        }
 
-		$data = [
-			'username' 			=> $this->username,
-			'lastReceivedId' 	=> $options['lastReceivedId']
-		];
+        if (!is_numeric($options['lastReceivedId'])) {
+            return $this->error('lastReceivedId must be an integer');
+        }   
 
-		$response = $this->client->get('messaging', ['query' => $data ] );
+        $data = [
+            'username'          => $this->username,
+            'lastReceivedId'    => $options['lastReceivedId']
+        ];
 
-		return $this->success($response);
-	}
+        $response = $this->client->get('messaging', ['query' => $data ] );
 
-	public function createSubscription ($options)
-	{
-		if(empty($options['phoneNumber']) || empty($options['shortCode']) || empty($options['keyword']) || empty($options['checkoutToken'])) {
-			return $this->error("phoneNumber, shortCode keyword and checkoutToken must be specified");
-		}
+        return $this->success($response);
+    }
 
-		$data = [
-			'username' 		=> $this->username,
-			'phoneNumber' 	=> $options['phoneNumber'],
-			'shortCode'		=> $options['shortCode'],
-			'keyword' 		=> $options['keyword'],
-			'checkoutToken'	=> $options['checkoutToken']
-		];
+    public function createSubscription ($options)
+    {
+        if(empty($options['phoneNumber']) || empty($options['shortCode']) || empty($options['keyword']) || empty($options['checkoutToken'])) {
+            return $this->error("phoneNumber, shortCode keyword and checkoutToken must be specified");
+        }
 
-		$response = $this->client->post('subscription/create', ['form_params' => $data ] );
+        $data = [
+            'username'      => $this->username,
+            'phoneNumber'   => $options['phoneNumber'],
+            'shortCode'     => $options['shortCode'],
+            'keyword'       => $options['keyword'],
+            'checkoutToken' => $options['checkoutToken']
+        ];
 
-		return $this->success($response);
-	}
+        $response = $this->client->post('subscription/create', ['form_params' => $data ] );
 
-	public function deleteSubscription ($options)
-	{
-		if(empty($options['phoneNumber']) || empty($options['shortCode']) || empty($options['keyword'])) {
-			return $this->error("phoneNumber, shortCode and keyword must be specified");
-		}
+        return $this->success($response);
+    }
 
-		$data = [
-			'username' 		=> $this->username,
-			'phoneNumber' 	=> $options['phoneNumber'],
-			'shortCode'		=> $options['shortCode'],
-			'keyword' 		=> $options['keyword']
-		];
+    public function deleteSubscription ($options)
+    {
+        if(empty($options['phoneNumber']) || empty($options['shortCode']) || empty($options['keyword'])) {
+            return $this->error("phoneNumber, shortCode and keyword must be specified");
+        }
 
-		$response = $this->client->post('subscription/delete', ['form_params' => $data ] );
+        $data = [
+            'username'      => $this->username,
+            'phoneNumber'   => $options['phoneNumber'],
+            'shortCode'     => $options['shortCode'],
+            'keyword'       => $options['keyword']
+        ];
 
-		return $this->success($response);
-	}
+        $response = $this->client->post('subscription/delete', ['form_params' => $data ] );
 
-	public function fetchSubscriptions($options)
-	{
-		if(empty($options['shortCode']) || empty($options['keyword'])) {
-			return $this->error("shortCode and keyword must be specified");
-		}
+        return $this->success($response);
+    }
 
-		if (empty($options['lastReceivedId'])) {
-			$options['lastReceivedId'] = 0;
-		}
+    public function fetchSubscriptions($options)
+    {
+        if(empty($options['shortCode']) || empty($options['keyword'])) {
+            return $this->error("shortCode and keyword must be specified");
+        }
 
-		if (!is_numeric($options['lastReceivedId'])) {
-			return $this->error('lastReceivedId must be an integer');
-		}
+        if (empty($options['lastReceivedId'])) {
+            $options['lastReceivedId'] = 0;
+        }
 
-		$data = [
-			'username' 			=> $this->username,
-			'lastReceivedId'	=> $options['lastReceivedId'],
-			'shortCode'			=> $options['shortCode'],
-			'keyword' 			=> $options['keyword']
-		];	
+        if (!is_numeric($options['lastReceivedId'])) {
+            return $this->error('lastReceivedId must be an integer');
+        }
 
-		$response = $this->client->get('subscription', ['query' => $data ] );
+        $data = [
+            'username'          => $this->username,
+            'lastReceivedId'    => $options['lastReceivedId'],
+            'shortCode'         => $options['shortCode'],
+            'keyword'           => $options['keyword']
+        ];  
 
-		return $this->success($response);
+        $response = $this->client->get('subscription', ['query' => $data ] );
 
-	}
+        return $this->success($response);
+
+    }
 }
